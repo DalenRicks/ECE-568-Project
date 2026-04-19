@@ -64,3 +64,66 @@ skew_ppm = (α / Hz[C_tcp] - 1) × 1,000,000
 
 This value is the clock skew in parts per million. It represents how much faster or slower the ESP32's clock runs relative to its intended frequency, and serves as the device fingerprint.
 
+---
+
+## Scripts
+
+### `setup.py`
+
+Run once before anything else. Creates a Python virtual environment at `~/fingerprinter-env` and installs `scapy` into it.
+
+```bash
+python3 setup.py
+```
+
+> **Windows:** Run as Administrator. **Linux:** Run as your regular user.
+
+---
+
+### `server.py`
+
+Starts a TCP server that accepts a connection from the ESP32 and keeps it open. The ESP32 needs something to connect to before any packets flow.
+
+```bash
+python3 server.py [--host HOST] [--port PORT]
+```
+
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `--host` | `0.0.0.0` | Interface to listen on. `0.0.0.0` accepts on all interfaces. |
+| `--port` | `12345` | Port to listen on. Must match the port set in the ESP32 menuconfig. |
+
+---
+
+### `run.py`
+
+The main entry point for capturing packets. Internally calls `capture.py` using the virtual environment Python. At least one of `--duration` or `--count` must be specified — if both are provided, capture stops at whichever condition is met first.
+
+```bash
+python3 run.py --src-ip <ESP32_IP> [--output FILE] [--duration SECONDS] [--count N]
+```
+
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `--src-ip` | required | IP address of the ESP32 to filter on |
+| `--output` | `timestamps.csv` | Output CSV file path |
+| `--duration` | — | Stop after this many seconds |
+| `--count` | — | Stop after this many packets |
+
+> **Linux:** Automatically runs with `sudo` since raw packet capture requires root privileges. Also fixes CSV file ownership after capture so the file is accessible without sudo. **Windows:** Run the terminal as Administrator instead.
+
+---
+
+### `capture.py`
+
+Called internally by `run.py` — you do not need to run this directly. It sniffs incoming TCP packets from the ESP32, extracts the TCP timestamp value from each packet header, and saves the collected `(arrival_time, tsval)` pairs to a CSV file.
+
+---
+
+## Usage Order
+
+1. Run `python3 setup.py` (first time only)
+2. Run `python3 server.py` in one terminal
+3. Run `python3 run.py --src-ip <ESP32_IP> --duration <seconds>` in another terminal
+4. Flash and run the ESP32 — it will connect to the server and begin sending packets
+5. After capture completes, the CSV file contains the timestamp pairs for skew estimation
