@@ -34,6 +34,18 @@ menu "Example Configuration"
         help
             password identifier for SAE H2E
 
+    config SERVER_IP
+        string "Server IP Address"
+        default "192.168.1.1"
+        help
+            IP address of the TCP server to connect to.
+
+    config SERVER_PORT
+        int "Server Port"
+        default 12345
+        help
+            Port number of the TCP server to connect to.
+
     config ESP_MAXIMUM_RETRY
         int "Maximum retry"
         default 5

@@ -162,8 +162,8 @@ int connect_tcp_server(void)
 	struct sockaddr_in serverInfo = {0};
 
 	serverInfo.sin_family = AF_INET;
-	serverInfo.sin_addr.s_addr = inet_addr("192.168.1.134");
-	serverInfo.sin_port = htons(12345);
+	serverInfo.sin_addr.s_addr = inet_addr(CONFIG_SERVER_IP);
+	serverInfo.sin_port = htons(CONFIG_SERVER_PORT);
 
 	int sock = socket(AF_INET, SOCK_STREAM, 0);
 	if (sock < 0)
