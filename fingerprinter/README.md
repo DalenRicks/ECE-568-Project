@@ -39,18 +39,20 @@ If the ESP32 clock ran at exactly its nominal frequency with zero network delay,
 
 ### 4. Estimating the Slope via Linear Programming
 
-Because network delay is always positive, observed points are always shifted downward from their true position. A standard least-squares regression would average across these delays and underestimate the slope.
+Plotting `y_i` (ticks) vs `x_i` (seconds) should produce points that follow a straight line, where the slope is the ESP32's tick rate. However, network delay distorts this picture.
 
-Instead, Kohno uses a **linear program to find the upper-bounding line** — the tightest line that sits above all observed points. This line represents the zero-delay case and its slope is therefore the true measured frequency of the ESP32's TSopt clock.
+Each packet experiences some positive delay between when the ESP32 sent it and when the server received it. This delay adds extra time to `t_i`, making `x_i` larger than it would be in a zero-delay scenario. Since `y_i` (the tick count) is unaffected by network delay, each observed point ends up shifted to the right of its true position on the graph. The result is that every point lies to the right of where it would be without delay — meaning every point falls **below** the true line rather than on it.
 
-The LP minimizes the average vertical distance from the line to all points, subject to the constraint that the line must upper-bound every point:
+Because of this one-sided distortion, standard least-squares regression underestimates the slope — it fits a line through the middle of the shifted points rather than recovering the true underlying relationship.
+
+Kohno addresses this by using **linear programming to find the minimum-slope upper-bounding line** — the line with the smallest possible slope that still remains above every observed point. Since all points are shifted below the true line due to delay, the upper-bounding line recovers the true slope. Formally, the LP solves for slope `α` and intercept `β`:
 
 ```
 minimize:   (1/|T|) * Σ (α·x_i + β - y_i)
 subject to: α·x_i + β ≥ y_i   for all i
 ```
 
-The solution gives slope `α` — the measured tick rate in ticks/second.
+The constraint ensures the line stays above all points. The objective minimizes how far above the points the line sits, making it as tight as possible. The resulting slope `α` is the measured tick rate in ticks/second.
 
 ### 5. Converting Slope to Clock Skew (ppm)
 
