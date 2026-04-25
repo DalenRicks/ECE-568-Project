@@ -7,16 +7,24 @@ from scipy.optimize import linprog    # for step 4 of readme linear programming 
 #read csv, get values
 def load_data(path):
     df = pd.read_csv(path)
-    return    ### TODO: check csv column names
+    return df   ### TODO: check csv column names
 
 
 #read me mentioned to shift time stamp so this makes the fitting part easier
 def to_relative(t, T):
     return t - t[0], T - T[0]
 
+def to_relative_df(data_frame: pd.DataFrame):
+    try:
+        # Create columns for the relative arrival time and relative tsval
+        data_frame['rel_arrival_time'] = data_frame['arrival_time'] - data_frame['arrival_time'].iloc[0]
+        data_frame['rel_tsval'] = (data_frame['tsval'] - data_frame['tsval'].iloc[0])
+    except Exception as e:
+        print(f"Error calculating the relative time - {e}")
+
 
 #step 4 of readme - linear programming slope estimation
-def solve_upper_bound_fit(x, y):
+def solve_upper_bound_fit(x, y) -> tuple:
     n = len(x)
 
     c = np.array([x.sum(), n])
@@ -27,7 +35,11 @@ def solve_upper_bound_fit(x, y):
     #this line was chatgpt
     res = linprog(c, A_ub=A, b_ub=b, bounds=[(None, None), (None, None)], method="highs")
 
-    return res.x
+    alpha = res.x[0]
+
+    beta = res.x[1]
+
+    return alpha, beta
 
 #step 5 of readme
 #use tick rate to get clk skew
@@ -56,4 +68,23 @@ def plot_fit(x, y, alpha, beta):
 
 
 if __name__ == "__main__":
-    # to do
+    # Specify the CSV file name (Should always this file name)
+    file_path = "timestamps.csv"
+    
+    # Get the data frame from the CSV
+    ts_df = load_data(file_path)
+
+    # Calculate the relative times
+    to_relative_df(ts_df)
+
+    # Scale the tsval values to seconds
+    ts_df['rel_tsval'] = ts_df['rel_tsval']
+
+    alpha, beta = solve_upper_bound_fit(ts_df['rel_arrival_time'], ts_df['rel_tsval'])
+    
+    # Calculate the ppm (I'm assuming the nominal frequency is 1000, not entirely sure what its supposed to be)
+    ppm = skew_ppm(alpha, 1000)
+
+    print(f"The calcualted clock skew is {ppm}ppm")
+
+    plot_fit(ts_df['rel_arrival_time'], ts_df['rel_tsval'], alpha, beta)
