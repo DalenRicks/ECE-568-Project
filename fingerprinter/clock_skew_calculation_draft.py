@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd # for reading csv
 import matplotlib.pyplot as plt # for plotting
 from scipy.optimize import linprog    # for step 4 of readme linear programming part
+import argparse
 
 
 #read csv, get values
@@ -68,11 +69,17 @@ def plot_fit(x, y, alpha, beta):
 
 
 if __name__ == "__main__":
-    # Specify the CSV file name (Should always this file name)
-    file_path = "timestamps.csv"
+    # Create the parser
+    parser = argparse.ArgumentParser(description='Calculates the clock skew of a timestamp file.')
+
+    # Add arguments
+    parser.add_argument('input_path', metavar='input_path', type=str, help='The filepath of the csv file')
+
+    # Parse the arguments
+    args = parser.parse_args()
     
     # Get the data frame from the CSV
-    ts_df = load_data(file_path)
+    ts_df = load_data(args.input_path)
 
     # Calculate the relative times
     to_relative_df(ts_df)
