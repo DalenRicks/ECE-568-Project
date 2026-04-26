@@ -127,3 +127,17 @@ Called internally by `run.py` — you do not need to run this directly. It sniff
 3. Run `python3 run.py --src-ip <ESP32_IP> --duration <seconds>` in another terminal
 4. Flash and run the ESP32 — it will connect to the server and begin sending packets
 5. After capture completes, the CSV file contains the timestamp pairs for skew estimation
+
+
+---
+
+### `clock_skew_calculator.py`
+
+Called after collecting data to calculate the clock skew. Will display the plot of the collected data and print the calculated clock skew in the terminal.
+
+```bash
+python3 clock_skew_calculator.py [file_path]
+```
+---
+
+
