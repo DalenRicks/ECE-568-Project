@@ -51,7 +51,7 @@ def solve_upper_bound_fit(x, y) -> tuple:
 #step 5 of readme
 #use tick rate to get clk skew
 def skew_ppm(alpha, nominal_hz):
-    return (alpha / nominal_hz - 1.0) * 1000000
+    return alpha * 1000000
 
 #step 4 plotting part of readme
 #plotting with upper bound fit
@@ -95,7 +95,9 @@ if __name__ == "__main__":
 
     # Scale the tsval values to seconds
     ts_df['rel_tsval'] = ts_df['rel_tsval']
-    alpha, beta = solve_upper_bound_fit(ts_df['rel_arrival_time'], ts_df['rel_tsval'])
+    # compute offset-set: convert ticks to seconds then subtract arrival time
+    ts_df['offset'] = ts_df['rel_tsval'] / nominal_hz - ts_df['rel_arrival_time']
+    alpha, beta = solve_upper_bound_fit(ts_df['rel_arrival_time'], ts_df['offset'])
     
     # Calculate the ppm
     ppm = skew_ppm(alpha, nominal_hz)
