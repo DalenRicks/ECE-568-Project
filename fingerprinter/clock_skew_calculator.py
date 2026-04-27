@@ -20,6 +20,8 @@ def to_relative_df(data_frame: pd.DataFrame):
         # Create columns for the relative arrival time and relative tsval
         data_frame['rel_arrival_time'] = data_frame['arrival_time'] - data_frame['arrival_time'].iloc[0]
         data_frame['rel_tsval'] = (data_frame['tsval'] - data_frame['tsval'].iloc[0])
+
+        print(data_frame)
     except Exception as e:
         print(f"Error calculating the relative time - {e}")
 
@@ -87,11 +89,19 @@ if __name__ == "__main__":
     # Scale the tsval values to seconds
     ts_df['rel_tsval'] = ts_df['rel_tsval']
 
-    alpha, beta = solve_upper_bound_fit(ts_df['rel_arrival_time'], ts_df['rel_tsval'])
+    # Solve for Hz
+    Hz_alpha, Hz_beta = solve_upper_bound_fit(ts_df['rel_arrival_time'], ts_df['rel_tsval'])
+
+    # compute the remaining intermediate values
+    ts_df['rel_tsval_Hz'] = ts_df['rel_tsval'] / Hz_alpha
+    ts_df['result'] = ts_df['rel_tsval'] - ts_df['rel_arrival_time']
+
+    # Solve for clock skew slope
+    cs_alpha, cs_beta = solve_upper_bound_fit(ts_df['rel_arrival_time'], ts_df['result'])
     
     # Calculate the ppm (I'm assuming the nominal frequency is 1000, not entirely sure what its supposed to be)
-    ppm = skew_ppm(alpha, 1000)
+    ppm = skew_ppm(cs_alpha, Hz_alpha)
 
-    print(f"The calcualted clock skew is {ppm}ppm")
+    print(f"The calcualted clock skew is {ppm + Hz_alpha}ppm")
 
-    plot_fit(ts_df['rel_arrival_time'], ts_df['rel_tsval'], alpha, beta)
+    plot_fit(ts_df['rel_arrival_time'], ts_df['rel_tsval'], cs_alpha, cs_beta)
