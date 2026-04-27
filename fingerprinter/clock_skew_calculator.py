@@ -57,12 +57,13 @@ def skew_ppm(alpha, nominal_hz):
 #plotting with upper bound fit
 def plot_fit(x, y, alpha, beta, nominal_hz, ppm):
     # convert tsval ticks to seconds then compute offset (Kohno Fig 1)
-    y_offset = (y / nominal_hz - x) * 1000  # milliseconds
+    y_offset = y * 1000  # already in seconds, convert to ms
 
     xs = np.linspace(0, x.max(), 100)
-    fit_line = (alpha * xs + beta) / nominal_hz * 1000 - xs * 1000
+    fit_line = (alpha * xs + beta) * 1000
 
-    plt.scatter(x, y_offset, s=10, label="data")
+    plt.figure(figsize=(10, 5))
+    plt.scatter(x, y_offset, s=10, alpha=0.3, label="data")
     plt.plot(xs, fit_line, label=f"upper bound ({ppm:.4f} ppm)")
     # least squares (mentioned in the readme)
     m, b = np.polyfit(x, y_offset, 1)
@@ -102,4 +103,4 @@ if __name__ == "__main__":
     # Calculate the ppm
     ppm = skew_ppm(alpha, nominal_hz)
     print(f"The calcualted clock skew is {ppm}ppm")
-    plot_fit(ts_df['rel_arrival_time'], ts_df['rel_tsval'], alpha, beta, nominal_hz, ppm)
+    plot_fit(ts_df['rel_arrival_time'], ts_df['offset'], alpha, beta, nominal_hz, ppm)
