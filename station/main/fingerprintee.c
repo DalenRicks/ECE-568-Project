@@ -196,7 +196,7 @@ void send_data(int sock)
 			break;
 		}
 		ESP_LOGI(TAG, "Sent: %s", msg);
-		vTaskDelay(100 / portTICK_PERIOD_MS);
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
 	}
 	close(sock);
 }

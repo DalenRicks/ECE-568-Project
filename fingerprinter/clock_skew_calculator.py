@@ -12,10 +12,6 @@ def load_data(path):
     df = pd.read_csv(path)
     return df   ### TODO: check csv column names
 
-#read me mentioned to shift time stamp so this makes the fitting part easier
-def to_relative(t, T):
-    return t - t[0], T - T[0]
-
 def to_relative_df(data_frame: pd.DataFrame):
     try:
         # Create columns for the relative arrival time and relative tsval
@@ -55,7 +51,7 @@ def skew_ppm(alpha, nominal_hz):
 
 #step 4 plotting part of readme
 #plotting with upper bound fit
-def plot_fit(x, y, alpha, beta, nominal_hz, ppm):
+def plot_fit(x, y, alpha, beta, ppm):
     # convert tsval ticks to seconds then compute offset (Kohno Fig 1)
     y_offset = y * 1000  # already in seconds, convert to ms
 
@@ -65,6 +61,7 @@ def plot_fit(x, y, alpha, beta, nominal_hz, ppm):
     plt.figure(figsize=(10, 5))
     plt.scatter(x, y_offset, s=10, alpha=0.3, label="data")
     plt.plot(xs, fit_line, label=f"upper bound ({ppm:.4f} ppm)")
+    
     # least squares (mentioned in the readme)
     m, b = np.polyfit(x, y_offset, 1)
     plt.plot(xs, m * xs + b, "--", label="least squares")
@@ -103,4 +100,4 @@ if __name__ == "__main__":
     # Calculate the ppm
     ppm = skew_ppm(alpha, nominal_hz)
     print(f"The calcualted clock skew is {ppm}ppm")
-    plot_fit(ts_df['rel_arrival_time'], ts_df['offset'], alpha, beta, nominal_hz, ppm)
+    plot_fit(ts_df['rel_arrival_time'], ts_df['offset'], alpha, beta, ppm)
