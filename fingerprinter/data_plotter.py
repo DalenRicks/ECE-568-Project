@@ -1,10 +1,9 @@
 import os
 import numpy as np
-import pandas as pd # for reading csv
 import matplotlib.pyplot as plt # for plotting
-import tkinter as tk
 from tkinter import filedialog
 from clock_skew_calculator import load_data, to_relative_df, infer_hz, solve_upper_bound_fit, skew_ppm
+import argparse
 
 # Defines for readability
 X_AXIS = 0
@@ -36,10 +35,22 @@ def select_files() -> list:
         print(f"Error selecting files - {e}")
 
 #plotting with upper bound fit
-def plot_data(files: list):
+def plot_data(files: list, plot_data_points: bool = True, plot_fit_line: bool = True, remove_y_intercept: bool = False):
+    '''
+    Plots the data for the list of offet-sets from the selected CSV files.
 
-    # TODO: Make sure files all start at 0 or show a warning. Maybe try to make it fit but dont worry about it if its too hard
-    # TODO: Take the longest file and make the line space off that. 0 pad the files that are shorter so that they are all the same length if matplotlib doesnt like the files of different lengths
+    This should be called after all data processing steps are complete.
+
+    Args:
+        - files: List of tuples containing the offet-sets, upper-bounds, ppm and file names.
+        - plot_data_points: Plots the offset-set data points on the chart
+        - plot_fit_line: Plots the upper-bound fit line for a given offset-set
+        - remove_y_intercept: Removes the y-intercept offset from the plot.
+    '''
+    
+    if not plot_data_points and not plot_fit_line:
+        print("Please plot data points, the fit line, or both.")
+        return
 
     plt.figure(figsize=(10, 5))
 
@@ -50,15 +61,24 @@ def plot_data(files: list):
         beta = file[BETA]
         ppm = file[PPM]
         file_name = file[FILE_NAME]
- 
-        # convert tsval ticks to seconds then compute offset (Kohno Fig 1)
-        y_offset = y * 1000  # already in seconds, convert to ms
+
+        if remove_y_intercept:
+            beta = 0
+            y_offset = 0
+        else:
+            # convert tsval ticks to seconds then compute offset (Kohno Fig 1)
+            y_offset = y * 1000  # already in seconds, convert to ms
 
         xs = np.linspace(0, x.max(), 100)
         fit_line = (alpha * xs + beta) * 1000
 
-        plt.scatter(x, y_offset, s=10, alpha=0.3, label=file_name)
-        plt.plot(xs, fit_line, label=f"{file_name} upper bound ({ppm:.4f} ppm)")
+        if plot_data_points:
+            plt.scatter(x, y_offset, s=10, alpha=0.3, label=file_name)
+        
+        if plot_fit_line:
+            plt.plot(xs, fit_line, label=f"{file_name} upper bound ({ppm:.4f} ppm)")
+
+        
         plt.xlabel("time (s)")
         plt.ylabel("observed offset (ms)")
         plt.title("Clock skew estimate")
@@ -68,11 +88,25 @@ def plot_data(files: list):
 
 
 if __name__ == "__main__":
+    # Create the parser
+    parser = argparse.ArgumentParser(description='Calculates the clock skew of a timestamp file.')
+    # Add arguments
+    parser.add_argument('--no_plot', action='store_true', help='Disables plotting the input file set')
+    parser.add_argument('--stats', action='store_true', help='Calculate additional statistics from the input file set (not plotted)')
+    parser.add_argument('--no_data_points', action='store_true', help='Does not plot data points on the graph')
+    parser.add_argument('--no_fit_line', action='store_true', help='Does not plot data points on the upper-bound fit line')
+    parser.add_argument('--no_y_intercept', action='store_true', help='Removes the y-intercept offset from the plot.')
+    parser.add_argument('--output_file', type=str, default=None, help='Specify an output file name to write the processed data to. Includes additional statistics if enabled.')
+    # Parse the arguments
+    args = parser.parse_args()
+
+    # Prompt the user to select a file
     files = select_files()
 
     # Initialze empty dataset list
     dataset = []
 
+    # Calculate the Clock skew of all the files
     if files is not None:
         print(f"Selected {len(files)} files")
 
@@ -103,12 +137,39 @@ if __name__ == "__main__":
             # Calculate the ppm
             ppm = skew_ppm(alpha, nominal_hz)
             print(f"The calcualted clock skew is: {ppm}ppm")
+
+            if args.stats:
+                # Calculate approximate runtime in minutes
+                samples = len(df['rel_arrival_time']) 
+                of_variance = np.var(df['offset'])
+                of_std = np.std(df['offset'])
+
+                print()
+                print("-------------- Additional Statistics --------------")
+                print(f"Number of samples: {samples}")
+                print(f"Trace intercept point: {beta}")
+                print(f"Offset Variance: {of_variance}")
+                print(f"Offset Standard Deviation: {of_std}")
+
+
             print("--------------------------------------------------------")
             print()
 
             # Pack data into tuple and append to data set list
             dataset.append((df['rel_arrival_time'], df['offset'], alpha, beta, ppm, fil_name))
 
-        plot_data(dataset) 
+        mean = None
+        std = None
+
+        if args.stats:
+            mean = np.mean([entry[PPM] for entry in dataset])
+            std = np.std([entry[PPM] for entry in dataset])
+
+            print("-------------- Global Statistics --------------")
+            print(f"Clock Skew Mean: {mean}ppm")
+            print(f"Clock Skew Standard Deviation: {std}")
+
+        if not args.no_plot:
+            plot_data(dataset, not args.no_data_points, not args.no_fit_line, args.no_y_intercept) 
 
     
