@@ -63,8 +63,8 @@ def plot_data(files: list, plot_data_points: bool = True, plot_fit_line: bool = 
         file_name = file[FILE_NAME]
 
         if remove_y_intercept:
+            y_offset = (y - beta) * 1000 
             beta = 0
-            y_offset = 0
         else:
             # convert tsval ticks to seconds then compute offset (Kohno Fig 1)
             y_offset = y * 1000  # already in seconds, convert to ms
