@@ -35,7 +35,7 @@ def select_files() -> list:
         print(f"Error selecting files - {e}")
 
 #plotting with upper bound fit
-def plot_data(files: list, plot_data_points: bool = True, plot_fit_line: bool = True, remove_y_intercept: bool = False):
+def plot_data(files: list, plot_data_points: bool = True, plot_fit_line: bool = True, remove_y_intercept: bool = False, length_equal: bool = False):
     '''
     Plots the data for the list of offet-sets from the selected CSV files.
 
@@ -51,8 +51,21 @@ def plot_data(files: list, plot_data_points: bool = True, plot_fit_line: bool = 
     if not plot_data_points and not plot_fit_line:
         print("Please plot data points, the fit line, or both.")
         return
+    
+    if not plot_fit_line and length_equal:
+        print("Unable to plot equal length since fit line is disabled")
+        return
 
     plt.figure(figsize=(10, 5))
+
+    # Initialize a longest file variable
+    longest_file_entries = 0
+
+    # Find the longest file
+    if length_equal:
+        for file in files:
+            if file[X_AXIS].max() > longest_file_entries:
+                longest_file_entries = file[X_AXIS].max()
 
     for file in files:
         x = file[X_AXIS]
@@ -69,7 +82,11 @@ def plot_data(files: list, plot_data_points: bool = True, plot_fit_line: bool = 
             # convert tsval ticks to seconds then compute offset (Kohno Fig 1)
             y_offset = y * 1000  # already in seconds, convert to ms
 
-        xs = np.linspace(0, x.max(), 100)
+        if length_equal:
+            xs = np.linspace(0, longest_file_entries, 100)
+        else:
+            xs = np.linspace(0, x.max(), 100)
+            
         fit_line = (alpha * xs + beta) * 1000
 
         if plot_data_points:
@@ -95,6 +112,7 @@ if __name__ == "__main__":
     parser.add_argument('--stats', action='store_true', help='Calculate additional statistics from the input file set (not plotted)')
     parser.add_argument('--no_data_points', action='store_true', help='Does not plot data points on the graph')
     parser.add_argument('--no_fit_line', action='store_true', help='Does not plot data points on the upper-bound fit line')
+    parser.add_argument('--fit_line_equal', action='store_true', help='Extends all of the fit lines to be the same length. Will be the length of the longest file.')
     parser.add_argument('--no_y_intercept', action='store_true', help='Removes the y-intercept offset from the plot.')
     parser.add_argument('--output_file', type=str, default=None, help='Specify an output file name to write the processed data to. Includes additional statistics if enabled.')
     # Parse the arguments
@@ -170,6 +188,6 @@ if __name__ == "__main__":
             print(f"Clock Skew Standard Deviation: {std}")
 
         if not args.no_plot:
-            plot_data(dataset, not args.no_data_points, not args.no_fit_line, args.no_y_intercept) 
+            plot_data(dataset, not args.no_data_points, not args.no_fit_line, args.no_y_intercept, args.fit_line_equal) 
 
     
